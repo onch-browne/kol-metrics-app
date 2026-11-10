@@ -37,7 +37,10 @@ const MAP = {
   }),
   instagram: (it) => ({
     handle: str(first(it, ["user.username", "owner.username", "ownerUsername", "username"])),
-    postUrl: str(first(it, ["url", "post_url"])),
+    postUrl: str(first(it, ["url", "post_url", "permalink", "inputUrl", "input_url"]))
+      ?? (str(first(it, ["code", "shortcode", "shortCode"]))
+        ? `https://www.instagram.com/p/${first(it, ["code", "shortcode", "shortCode"])}/`
+        : null),
     datePosted: day(first(it, ["taken_at", "taken_at_timestamp", "timestamp"])),
     likes: num(it, ["like_count", "likes_count", "metrics.like_count"]),
     comments: num(it, ["comment_count", "comments_count", "metrics.comment_count"]),
