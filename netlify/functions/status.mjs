@@ -16,6 +16,13 @@ const day = (v) => {
   return isNaN(d) ? null : d.toISOString().slice(0, 10);
 };
 const str = (v) => (typeof v === "string" ? v : null);
+// fallback: any field that looks like a post date, ignoring scrape metadata
+const guessDate = (it) => {
+  for (const [k, v] of Object.entries(it)) {
+    if (/time|date|created|posted/i.test(k) && !/scrape|crawl|fetch|extract/i.test(k) && day(v)) return day(v);
+  }
+  return null;
+};
 
 // Field names are best guesses with fallbacks. Check them against the first
 // raw item the app logs to the browser console and adjust the lists if needed.
@@ -39,7 +46,7 @@ const MAP = {
   facebook: (it) => ({
     handle: str(first(it, ["pageName", "author.name", "user.name", "author"])),
     postUrl: str(first(it, ["url", "inputUrl"])),
-    datePosted: day(first(it, ["timestamp", "time", "date"])),
+    datePosted: day(first(it, ["timestamp", "time", "date", "publishedTime", "postedAt", "createdTime"])) ?? guessDate(it),
     likes: num(it, ["reactions", "likesCount", "reactionsCount"]),
     comments: num(it, ["comments", "commentsCount"]),
     shares: num(it, ["shares", "sharesCount"]),
