@@ -35,16 +35,23 @@ export default async (req) => {
   }
 
   const runs = [], errors = [];
-  for (const [p, cfg] of Object.entries(APIFY)) {
+    for (const [p, cfg] of Object.entries(APIFY)) {
     if (!groups[p].length) continue;
-    const r = await fetch(`https://api.apify.com/v2/acts/${cfg.actor}/runs?timeout=600`, {
-      method: "POST",
-      headers: { "content-type": "application/json", authorization: `Bearer ${process.env.APIFY_TOKEN}` },
-      body: JSON.stringify(cfg.input(groups[p])),
-    });
-    const data = (await r.json()).data;
-    if (r.ok && data) runs.push({ platform: p, runId: data.id });
-    else errors.push(`${LABEL[p]}: couldn't start the Apify run (check APIFY_TOKEN and credit)`);
+    const start = (input) =>
+      fetch(`https://api.apify.com/v2/acts/${cfg.actor}/runs?timeout=600`, {
+        method: "POST",
+        headers: { "content-type": "application/json", authorization: `Bearer ${process.env.APIFY_TOKEN}` },
+        body: JSON.stringify(input),
+      });
+    let r = await start(cfg.input(groups[p]));
+    let body = await r.json();
+    if (!r.ok && p === "facebook") {
+      // some actors want one link per line as text instead of a list
+      r = await start({ urls: groups[p].join("\n") });
+      body = await r.json();
+    }
+    if (r.ok && body.data) runs.push({ platform: p, runId: body.data.id });
+    else errors.push(`${LABEL[p]}: ${body.error?.message || "couldn't start the Apify run"}`);
   }
 
   let rows = [];
